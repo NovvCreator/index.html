@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi Ujian — Koding & Kecerdasan Artifisial</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0d0d0f;--surface:#16161a;--surface2:#1e1e24;--border:#2a2a35;--text:#e8e8f0;--muted:#6b6b80;--accent:#38bdf8;--accent2:#7dd3fc;--green:#34d399;--red:#f87171;--yellow:#fbbf24;--radius:14px;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  body::before{content:'';position:fixed;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(56,189,248,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;}
+  body::after{content:'';position:fixed;bottom:-200px;left:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(125,211,252,0.04) 0%,transparent 70%);pointer-events:none;z-index:0;}
+  .screen{display:none;width:100%;max-width:720px;position:relative;z-index:1;animation:fadeIn 0.4s ease;}
+  .screen.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+  .start-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px 38px;text-align:center;}
+  .start-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);padding:6px 16px;border-radius:100px;margin-bottom:22px;}
+  .start-title{font-family:'DM Serif Display',serif;font-size:clamp(22px,5vw,36px);line-height:1.2;margin-bottom:10px;}
+  .start-sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:26px;}
+  .start-meta{display:flex;justify-content:center;gap:28px;margin-bottom:26px;flex-wrap:wrap;}
+  .meta-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .meta-val{font-family:'DM Serif Display',serif;font-size:26px;color:var(--accent2);}
+  .meta-label{font-size:12px;color:var(--muted);}
+  .topics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin-bottom:26px;text-align:left;}
+  .topic-chip{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+  .topic-chip span{color:var(--accent2);font-family:'JetBrains Mono',monospace;font-size:11px;}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;transition:all 0.2s;}
+  .btn-primary{background:var(--accent);color:#0d0d0f;}
+  .btn-primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(56,189,248,0.3);}
+  .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent2);}
+  .btn-ghost{background:var(--surface2);color:var(--text);}
+  .btn-ghost:hover{background:var(--border);}
+
+  .quiz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px;}
+  .timer-wrap{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:8px 16px;border-radius:100px;white-space:nowrap;}
+  .timer-wrap.warning{color:var(--yellow);border-color:rgba(251,191,36,0.3);}
+  .timer-wrap.danger{color:var(--red);border-color:rgba(248,113,113,0.3);animation:pulse 1s infinite;}
+  .q-counter{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);white-space:nowrap;}
+  .progress-track{height:4px;background:var(--surface2);border-radius:100px;margin-bottom:26px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:100px;transition:width 0.4s ease;}
+
+  .q-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;}
+  .q-category{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);padding:4px 12px;border-radius:100px;margin-bottom:14px;}
+  .q-text{font-size:16px;line-height:1.65;color:var(--text);margin-bottom:20px;font-family:'DM Serif Display',serif;}
+  .options-grid{display:flex;flex-direction:column;gap:9px;}
+  .option-btn{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all 0.18s;text-align:left;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;width:100%;}
+  .option-btn:hover:not(:disabled){border-color:var(--accent);background:rgba(56,189,248,0.07);}
+  .option-key{min-width:27px;height:27px;display:flex;align-items:center;justify-content:center;background:var(--border);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--muted);transition:all 0.18s;flex-shrink:0;}
+  .option-btn:hover:not(:disabled) .option-key{background:var(--accent);color:#0d0d0f;}
+  .option-btn.correct{border-color:var(--green);background:rgba(52,211,153,0.1);}
+  .option-btn.correct .option-key{background:var(--green);color:#000;}
+  .option-btn.wrong{border-color:var(--red);background:rgba(248,113,113,0.1);}
+  .option-btn.wrong .option-key{background:var(--red);color:white;}
+  .option-btn.reveal{border-color:var(--green);background:rgba(52,211,153,0.06);}
+  .option-btn.reveal .option-key{background:var(--green);color:#000;}
+  .option-btn:disabled{cursor:default;}
+
+  .feedback-box{margin-top:14px;padding:12px 16px;border-radius:var(--radius);font-size:14px;font-weight:500;display:none;align-items:center;gap:10px;}
+  .feedback-box.show{display:flex;animation:fadeIn 0.25s ease;}
+  .feedback-box.correct-fb{background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);color:var(--green);}
+  .feedback-box.wrong-fb{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:var(--red);}
+  .next-row{margin-top:16px;display:flex;justify-content:flex-end;}
+  .kbd-hint{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap;}
+  .kbd{background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+
+  .result-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 32px;text-align:center;}
+  .score-ring-wrap{position:relative;width:148px;height:148px;margin:0 auto 26px;}
+  .score-ring{width:148px;height:148px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;}
+  .score-ring::before{content:'';position:absolute;width:114px;height:114px;background:var(--surface);border-radius:50%;}
+  .score-inner{position:relative;z-index:1;text-align:center;}
+  .score-pct{font-family:'DM Serif Display',serif;font-size:32px;line-height:1;color:var(--text);display:block;}
+  .score-label{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+  .result-title{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:6px;}
+  .result-sub{color:var(--muted);font-size:13px;margin-bottom:24px;}
+  .stats-row{display:flex;justify-content:center;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+  .stat-pill{background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:8px 18px;font-size:13px;display:flex;align-items:center;gap:8px;}
+  .stat-pill .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot-green{background:var(--green)}.dot-red{background:var(--red)}.dot-muted{background:var(--muted)}
+  .breakdown{margin-bottom:22px;}
+  .breakdown-title{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;font-family:'JetBrains Mono',monospace;}
+  .breakdown-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+  .breakdown-chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-size:12px;display:flex;align-items:center;gap:6px;}
+  .breakdown-chip .chip-cat{color:var(--muted);}
+  .breakdown-chip .chip-score{font-family:'JetBrains Mono',monospace;}
+  .chip-good{border-color:rgba(52,211,153,0.3);}.chip-good .chip-score{color:var(--green);}
+  .chip-bad{border-color:rgba(248,113,113,0.3);}.chip-bad .chip-score{color:var(--red);}
+  .result-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+
+  .review-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+  .review-title{font-family:'DM Serif Display',serif;font-size:22px;}
+  .review-list{display:flex;flex-direction:column;gap:12px;}
+  .review-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+  .review-q-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+  .review-q-cat{font-size:11px;color:var(--muted);margin-bottom:8px;}
+  .review-q-text{font-size:14px;line-height:1.6;margin-bottom:12px;color:var(--text);}
+  .review-ans{display:flex;flex-direction:column;gap:6px;}
+  .ans-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;padding:8px 12px;border-radius:8px;}
+  .ans-row.user-ans{background:rgba(248,113,113,0.1);color:var(--red);}
+  .ans-row.correct-ans{background:rgba(52,211,153,0.1);color:var(--green);}
+  .ans-tag{font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.7;white-space:nowrap;padding-top:1px;}
+
+  @media(max-width:560px){.start-card,.result-card{padding:26px 16px}.q-card{padding:18px 14px}.topics-grid{grid-template-columns:1fr 1fr}.review-item{padding:14px 12px}}
+</style>
+</head>
+<body>
+
+<!-- START -->
+<div class="screen active" id="screen-start">
+  <div class="start-card">
+    <div class="start-badge">Simulasi Ujian</div>
+    <h1 class="start-title">Koding &<br><em>Kecerdasan Artifisial</em></h1>
+    <p class="start-sub">30 soal pilihan ganda · Diacak setiap sesi · Feedback langsung</p>
+    <div class="start-meta">
+      <div class="meta-item"><span class="meta-val">30</span><span class="meta-label">Soal</span></div>
+      <div class="meta-item"><span class="meta-val">30</span><span class="meta-label">Menit</span></div>
+      <div class="meta-item"><span class="meta-val">6</span><span class="meta-label">Topik</span></div>
+    </div>
+    <div class="topics-grid">
+      <div class="topic-chip"><span>01</span>Konsep Dasar AI</div>
+      <div class="topic-chip"><span>02</span>Jenis-Jenis AI</div>
+      <div class="topic-chip"><span>03</span>Penerapan AI</div>
+      <div class="topic-chip"><span>04</span>Teknologi AI</div>
+      <div class="topic-chip"><span>05</span>Etika & Batas AI</div>
+      <div class="topic-chip"><span>06</span>Tokoh & Sejarah</div>
+    </div>
+    <button class="btn btn-primary" onclick="startQuiz()">Mulai Ujian →</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="screen-quiz">
+  <div class="quiz-header">
+    <div class="q-counter" id="q-counter">Soal 1/30</div>
+    <div class="timer-wrap" id="timer">⏱ 30:00</div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="q-card" id="q-card">
+    <div class="q-category" id="q-category"></div>
+    <div class="q-text" id="q-text"></div>
+    <div class="options-grid" id="options-grid"></div>
+    <div class="feedback-box" id="feedback-box"></div>
+    <div class="next-row"><button class="btn btn-primary" id="next-btn" onclick="nextQ()" style="display:none">Selanjutnya <span style="font-family:JetBrains Mono">↵</span></button></div>
+    <div class="kbd-hint">Pilih:<span class="kbd">A</span><span class="kbd">B</span><span class="kbd">C</span><span class="kbd">D</span>&nbsp;Lanjut:<span class="kbd">Enter</span></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="screen-result">
+  <div class="result-card">
+    <div class="score-ring-wrap"><div class="score-ring" id="score-ring"><div class="score-inner"><span class="score-pct" id="score-pct">0%</span><span class="score-label">Skor</span></div></div></div>
+    <div class="result-title" id="result-title">—</div>
+    <div class="result-sub" id="result-sub">—</div>
+    <div class="stats-row">
+      <div class="stat-pill"><span class="dot dot-green"></span><span id="stat-benar">0 Benar</span></div>
+      <div class="stat-pill"><span class="dot dot-red"></span><span id="stat-salah">0 Salah</span></div>
+      <div class="stat-pill"><span class="dot dot-muted"></span><span id="stat-time">—</span></div>
+    </div>
+    <div class="breakdown"><div class="breakdown-title">Per Topik</div><div class="breakdown-grid" id="breakdown-grid"></div></div>
+    <div class="result-actions">
+      <button class="btn btn-outline" onclick="showReview()">Review Kesalahan</button>
+      <button class="btn btn-ghost" onclick="retryWrong()" id="btn-rw">Ulangi Soal Salah</button>
+      <button class="btn btn-primary" onclick="startQuiz()">Ulangi ↺</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div class="screen" id="screen-review">
+  <div class="review-header"><div class="review-title">Review Kesalahan</div><button class="btn btn-outline" onclick="showResult()">← Kembali</button></div>
+  <div class="review-list" id="review-list"></div>
+  <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <button class="btn btn-ghost" onclick="retryWrong()" id="btn-rw2">Ulangi Soal Salah</button>
+    <button class="btn btn-primary" onclick="startQuiz()">Ulangi Semua ↺</button>
+  </div>
+</div>
+
+<script>
+const C = {
+  KONSEP: "Konsep Dasar AI",
+  JENIS: "Jenis-Jenis AI",
+  TERAPAN: "Penerapan AI",
+  TEKNOLOGI: "Teknologi AI",
+  ETIKA: "Etika & Batas AI",
+  SEJARAH: "Tokoh & Sejarah"
+};
+
+const Q = [
+  {c:C.KONSEP, q:"Teknologi yang memungkinkan mesin atau komputer untuk meniru kemampuan intelektual manusia disebut...", o:["Cloud Computing","Cyber Security","Internet of Things (IoT)","Artificial Intelligence (AI)"], a:3},
+  {c:C.KONSEP, q:"Tujuan utama dari pengembangan Kecerdasan Buatan adalah untuk...", o:["Menggantikan seluruh peran manusia di bumi","Membantu manusia dalam menyelesaikan tugas secara efisien","Membuat manusia berhenti belajar dan berpikir","Membuat komputer menjadi lebih mahal harganya"], a:1},
+  {c:C.SEJARAH, q:"Tokoh yang dikenal sebagai Bapak Ilmu Komputer dan memberikan kontribusi besar pada konsep awal AI adalah...", o:["Steve Jobs","Bill Gates","Alan Turing","Mark Zuckerberg"], a:2},
+  {c:C.JENIS, q:"Jenis AI yang hanya mampu melakukan satu tugas spesifik (seperti bermain catur atau mengenali wajah) disebut...", o:["General AI","Humanoid AI","Narrow AI (Weak AI)","Super AI"], a:2},
+  {c:C.TERAPAN, q:"Contoh penerapan AI yang sering kita temukan pada smartphone untuk membantu pencarian suara adalah...", o:["Kalkulator","Pengaturan Kecerahan Layar","Virtual Assistant (seperti Siri atau Google Assistant)","Stopwatch"], a:2},
+  {c:C.TEKNOLOGI, q:"Kemampuan mesin untuk belajar dari data tanpa diprogram secara eksplisit disebut...", o:["Web Programming","Machine Learning","Database Management","Networking"], a:1},
+  {c:C.TERAPAN, q:"Saat kita menonton video di YouTube dan muncul saran video lain yang serupa, teknologi AI yang digunakan adalah...", o:["Sistem Operasi","Sistem Komunikasi","Sistem Keamanan","Sistem Rekomendasi"], a:3},
+  {c:C.KONSEP, q:"Salah satu ciri utama dari sistem yang menggunakan AI adalah kemampuannya untuk...", o:["Mengenali pola dan mengambil keputusan dari data","Menyimpan data dalam jumlah sangat sedikit","Menggunakan listrik yang sangat banyak","Berbicara dengan suara robot yang kaku"], a:0},
+  {c:C.TEKNOLOGI, q:"Teknologi AI yang digunakan untuk mengubah suara manusia menjadi teks disebut...", o:["Face Detection","Image Recognition","Data Mining","Speech Recognition"], a:3},
+  {c:C.JENIS, q:"Chatbot yang mampu menjawab pertanyaan dan berdiskusi dengan bahasa yang natural seperti manusia adalah contoh dari...", o:["Hardware AI","Generative AI","Manual Intelligence","Logic Circuit"], a:1},
+  {c:C.TERAPAN, q:"Di bawah ini yang merupakan contoh penerapan AI dalam bidang transportasi adalah...", o:["Penggunaan ban tubeless","Mobil otonom (self-driving car)","Penggunaan lampu LED","Penggunaan bahan bakar bensin"], a:1},
+  {c:C.TEKNOLOGI, q:"Teknologi AI yang mampu mengenali wajah seseorang untuk membuka kunci layar ponsel disebut...", o:["Password Logic","Voice Command","Face Recognition","Fingerprint Scanner"], a:2},
+  {c:C.KONSEP, q:"AI bekerja dengan cara memproses data dalam jumlah besar yang sering disebut dengan istilah...", o:["Meta Data","Hard Data","Small Data","Big Data"], a:3},
+  {c:C.TERAPAN, q:"Dalam bidang kesehatan, AI dapat membantu dokter dalam mendiagnosa penyakit. Proses ini melibatkan pengolahan data pada...", o:["Page","Slide","Sheet","Frame"], a:2},
+  {c:C.ETIKA, q:"Manakah di bawah ini yang bukan merupakan manfaat dari AI?", o:["Mengurangi kesalahan manusia (human error)","Membantu pekerjaan yang berulang-ulang","Mempercepat pengolahan data","Menghilangkan kemampuan berpikir kritis manusia"], a:3},
+  {c:C.SEJARAH, q:"Istilah 'Turing Test' digunakan untuk menentukan apakah sebuah mesin bisa...", o:["Menyelam di dalam air","Menunjukkan kecerdasan setingkat manusia","Terbang ke luar angkasa","Mengolah angka dengan sangat cepat"], a:1},
+  {c:C.KONSEP, q:"Algoritma dalam AI berfungsi sebagai...", o:["Tempat menyimpan baterai","Kabel penghubung internet","Layar tampilan komputer","Serangkaian instruksi untuk memecahkan masalah"], a:3},
+  {c:C.TERAPAN, q:"Contoh perangkat rumah tangga yang mulai banyak menggunakan teknologi AI adalah...", o:["Robot vacuum cleaner (penyedot debu otomatis)","Sapu ijuk","Kompor gas manual","Ember plastik"], a:0},
+  {c:C.TEKNOLOGI, q:"Bidang AI yang berfokus pada kemampuan komputer untuk memahami dan menafsirkan gambar atau video disebut...", o:["Text Analytics","Audio Processing","Cloud Processing","Computer Vision"], a:3},
+  {c:C.TERAPAN, q:"Penggunaan AI dalam media sosial bertujuan untuk...", o:["Menyaring konten yang sesuai dengan minat pengguna","Mengubah warna aplikasi secara acak","Menghapus semua akun pengguna","Mematikan koneksi internet"], a:0},
+  {c:C.JENIS, q:"AI yang dirancang untuk memiliki kecerdasan setara dengan kecerdasan manusia di segala bidang (masih bersifat teoritis) disebut...", o:["Narrow AI","Special AI","Artificial General Intelligence (AGI)","Limited AI"], a:2},
+  {c:C.ETIKA, q:"Salah satu etika penting dalam penggunaan AI adalah...", o:["Menggunakan AI untuk menyebarkan berita bohong","Menjaga privasi data pengguna","Menggunakan AI untuk menipu orang lain","Mencuri karya orang lain menggunakan AI"], a:1},
+  {c:C.TEKNOLOGI, q:"Teknologi yang memungkinkan AI memahami bahasa manusia sehari-hari (seperti bahasa Indonesia) disebut...", o:["GPU (Graphics Processing Unit)","RAM (Random Access Memory)","CPU (Central Processing Unit)","NLP (Natural Language Processing)"], a:3},
+  {c:C.TEKNOLOGI, q:"Jika sebuah AI digunakan untuk mendeteksi email sampah (spam), maka AI tersebut melakukan proses...", o:["Pengiriman pesan","Pengetikan teks","Penghapusan data","Klasifikasi (Classification)"], a:3},
+  {c:C.KONSEP, q:"Apa yang menjadi 'makanan' utama bagi sistem AI agar menjadi semakin pintar?", o:["Ruangan yang dingin","Perangkat keras yang mahal","Data dan informasi","Arus listrik yang tinggi"], a:2},
+  {c:C.TERAPAN, q:"Robot yang dapat bergerak sendiri menghindari rintangan menggunakan sensor dan AI termasuk dalam kategori...", o:["Robot Otonom","Robot Manual","Robot Remote Control","Robot Statis"], a:0},
+  {c:C.ETIKA, q:"Salah satu keterbatasan AI saat ini adalah...", o:["Tidak bisa bekerja tanpa kabel","Tidak memiliki perasaan atau empati sejati seperti manusia","Tidak bisa menghitung cepat","Tidak memiliki memori penyimpanan"], a:1},
+  {c:C.TEKNOLOGI, q:"Bidang AI yang mempelajari bagaimana komputer dapat bercakap-cakap dengan manusia disebut...", o:["Data Mining","Blockchain","Image Synthesis","Conversational AI"], a:3},
+  {c:C.TERAPAN, q:"AI yang digunakan di perbankan untuk mendeteksi adanya transaksi mencurigakan (penipuan) disebut sistem...", o:["Fraud Detection","Entertainment","Social Media","Advertising"], a:0},
+  {c:C.ETIKA, q:"Di masa depan, pembelajaran tentang AI di sekolah bertujuan agar siswa dapat...", o:["Bergantung sepenuhnya pada mesin","Memanfaatkan teknologi secara bijak dan inovatif","Menjadi robot","Berhenti menggunakan komputer"], a:1},
+];
+
+let qs=[], cur=0, ans=[], ok=[], sOpts=[], tInt, tLeft=1800, tUsed=0, retry=false, wrongs=[];
+
+function sh(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+
+function startQuiz(qo){
+  retry=!!qo; qs=qo?qo:sh([...Q]);
+  cur=0; ans=Array(qs.length).fill(null); ok=Array(qs.length).fill(false);
+  sOpts=qs.map(q=>sh(q.o.map((_,i)=>i)));
+  tLeft=1800; tUsed=0; clearInterval(tInt); tInt=setInterval(tick,1000);
+  ss('quiz'); render();
+}
+
+function tick(){tLeft--;tUsed++;updTimer();if(tLeft<=0){clearInterval(tInt);finish();}}
+
+function updTimer(){
+  const m=Math.floor(tLeft/60).toString().padStart(2,'0'),s=(tLeft%60).toString().padStart(2,'0');
+  const el=document.getElementById('timer'); el.textContent=`⏱ ${m}:${s}`;
+  el.className='timer-wrap';
+  if(tLeft<=300&&tLeft>60)el.classList.add('warning');
+  if(tLeft<=60)el.classList.add('danger');
+}
+
+function render(){
+  const q=qs[cur],tot=qs.length;
+  document.getElementById('q-counter').textContent=`Soal ${cur+1}/${tot}`;
+  document.getElementById('progress-fill').style.width=`${(cur/tot)*100}%`;
+  document.getElementById('q-category').textContent=q.c;
+  document.getElementById('q-text').textContent=q.q;
+  const K=['A','B','C','D'],S=sOpts[cur];
+  document.getElementById('options-grid').innerHTML=S.map((oi,p)=>`
+    <button class="option-btn" id="opt-${p}" onclick="pick(${p})">
+      <span class="option-key">${K[p]}</span>
+      <span>${e(q.o[oi])}</span>
+    </button>`).join('');
+  document.getElementById('feedback-box').className='feedback-box';
+  document.getElementById('next-btn').style.display='none';
+  const c=document.getElementById('q-card'); c.style.animation='none'; c.offsetHeight; c.style.animation='slideIn 0.3s ease';
+}
+
+function e(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function pick(p){
+  const q=qs[cur],S=sOpts[cur],ch=S[p],isOk=ch===q.a;
+  ans[cur]=p; ok[cur]=isOk;
+  document.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);
+  document.getElementById(`opt-${p}`).classList.add(isOk?'correct':'wrong');
+  if(!isOk){const cp=S.indexOf(q.a);document.getElementById(`opt-${cp}`).classList.add('reveal');}
+  const fb=document.getElementById('feedback-box');
+  if(isOk){fb.className='feedback-box correct-fb show';fb.innerHTML='✓ &nbsp;Jawaban benar!';}
+  else{fb.className='feedback-box wrong-fb show';fb.innerHTML=`✗ &nbsp;Salah. Benar: <strong>${e(q.o[q.a])}</strong>`;}
+  document.getElementById('next-btn').style.display='inline-flex';
+}
+
+function nextQ(){if(ans[cur]===null)return;if(cur<qs.length-1){cur++;render();}else finish();}
+
+function finish(){
+  clearInterval(tInt);
+  const benar=ok.filter(Boolean).length,salah=qs.length-benar,pct=Math.round((benar/qs.length)*100);
+  wrongs=qs.map((_,i)=>i).filter(i=>!ok[i]);
+  const col=pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+  document.getElementById('score-ring').style.background=`conic-gradient(${col} ${pct}%, var(--surface2) ${pct}%)`;
+  document.getElementById('score-pct').textContent=`${pct}%`;
+  document.getElementById('result-title').textContent=pct>=90?'Luar Biasa! 🎉':pct>=75?'Bagus! 👏':pct>=60?'Lumayan, Perlu Diulang':'Kudu Belajar Lagi 📚';
+  document.getElementById('result-sub').textContent=retry?'Hasil ulangi soal salah':'Hasil simulasi ujian Koding & KA';
+  document.getElementById('stat-benar').textContent=`${benar} Benar`;
+  document.getElementById('stat-salah').textContent=`${salah} Salah`;
+  const mn=Math.floor(tUsed/60),sc=tUsed%60;
+  document.getElementById('stat-time').textContent=`${mn}m ${sc}s`;
+  const cs={};Object.values(C).forEach(c=>cs[c]={b:0,t:0});
+  qs.forEach((q,i)=>{cs[q.c].t++;if(ok[i])cs[q.c].b++;});
+  document.getElementById('breakdown-grid').innerHTML=Object.entries(cs).filter(([,v])=>v.t>0).map(([cat,v])=>{
+    const p=Math.round((v.b/v.t)*100),cl=p>=70?'chip-good':'chip-bad';
+    return `<div class="breakdown-chip ${cl}"><span class="chip-cat">${cat}</span><span class="chip-score">${v.b}/${v.t}</span></div>`;
+  }).join('');
+  document.getElementById('btn-rw').style.display=wrongs.length>0?'':'none';
+  ss('result');
+}
+
+function showReview(){
+  const list=document.getElementById('review-list'),K=['A','B','C','D'];
+  if(wrongs.length===0){list.innerHTML='<div style="color:var(--green);text-align:center;padding:32px;font-size:16px;">🎉 Semua jawaban benar!</div>';ss('review');return;}
+  list.innerHTML=wrongs.map((qi,idx)=>{
+    const q=qs[qi],S=sOpts[qi],up=ans[qi],uoi=up!==null?S[up]:null,cp=S.indexOf(q.a);
+    const ut=uoi!==null?`${K[up]}. ${q.o[uoi]}`:'(tidak dijawab)',ct=`${K[cp]}. ${q.o[q.a]}`;
+    return `<div class="review-item">
+      <div class="review-q-num">Salah ${idx+1}/${wrongs.length}</div>
+      <div class="review-q-cat">${q.c}</div>
+      <div class="review-q-text">${e(q.q)}</div>
+      <div class="review-ans">
+        <div class="ans-row user-ans"><span class="ans-tag">Jawabanmu</span><span>${e(ut)}</span></div>
+        <div class="ans-row correct-ans"><span class="ans-tag">Jawaban benar</span><span>${e(ct)}</span></div>
+      </div></div>`;
+  }).join('');
+  document.getElementById('btn-rw2').style.display=wrongs.length>0?'':'none';
+  ss('review');
+}
+
+function retryWrong(){if(wrongs.length===0)return;startQuiz(sh(wrongs.map(i=>qs[i])));}
+function showResult(){ss('result');}
+function ss(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+n).classList.add('active');}
+
+document.addEventListener('keydown',ev=>{
+  const sc=document.querySelector('.screen.active');
+  if(!sc||sc.id!=='screen-quiz')return;
+  const k=ev.key.toUpperCase(),bs=document.querySelectorAll('.option-btn:not(:disabled)');
+  if(k==='A'&&bs[0]){bs[0].click();return;}
+  if(k==='B'&&bs[1]){bs[1].click();return;}
+  if(k==='C'&&bs[2]){bs[2].click();return;}
+  if(k==='D'&&bs[3]){bs[3].click();return;}
+  if(k==='ENTER'){const nb=document.getElementById('next-btn');if(nb&&nb.style.display!=='none')nb.click();}
+});
+</script>
+</body>
+</html>
